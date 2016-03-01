@@ -1,0 +1,7 @@
+
+#ifndef USE_MINGW
+#define lseek64 lseek
+#define ftruncate64 ftruncate
+#define mmap64 mmap
+#define off64_t off_t
+#endif
