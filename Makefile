@@ -10,9 +10,11 @@ RM = del
 endif
 
 CFLAGS = -DHOST -Icore/include -Icore/libsparse/include -Icore/libsparse -Ilibselinux/include -Icore/mkbootimg
-LDFLAGS = -L. 
+DFLAGS = -Werror -Iandroid_suport_include
+EFLAGS = -Ibionic/libc/include -Ibionic/libc/kernel/uapi -Ibionic/libc/kernel/uapi/asm-x86
+LDFLAGS = -L.
 LIBS = -lz
-LIBZ = -lsparse_host -lselinux -lpcre
+LIBZ = -lsparse -lselinux -lpcre -lcutils -llog
 SELINUX_SRCS= \
 	libselinux/src/booleans.c \
 	libselinux/src/canonicalize_context.c \
@@ -63,7 +65,6 @@ EXT4FS_SRCS= \
     extras/ext4_utils/contents.c \
     extras/ext4_utils/extent.c \
     extras/ext4_utils/indirect.c \
-    extras/ext4_utils/uuid.c \
     extras/ext4_utils/sha1.c \
     extras/ext4_utils/wipe.c \
     extras/ext4_utils/crc16.c \
@@ -71,13 +72,40 @@ EXT4FS_SRCS= \
 EXT4FS_MAIN= \
     extras/ext4_utils/make_ext4fs_main.c \
     extras/ext4_utils/canned_fs_config.c
+LIBCUTILS_SRCS= \
+	core/libcutils/hashmap.c \
+	core/libcutils/native_handle.c \
+	core/libcutils/config_utils.c \
+	core/libcutils/load_file.c \
+	core/libcutils/strlcpy.c \
+	core/libcutils/open_memstream.c \
+	core/libcutils/strdup16to8.c \
+	core/libcutils/strdup8to16.c \
+	core/libcutils/record_stream.c \
+	core/libcutils/process_name.c \
+	core/libcutils/threads.c \
+	core/libcutils/sched_policy.c \
+	core/libcutils/iosched_policy.c \
+	core/libcutils/str_parms.c \
+	core/libcutils/fs_config.c
+LIBLOG1_SRCS= \
+	core/liblog/uio.c \
+	core/liblog/event_tag_map.c \
+	core/liblog/fake_log_device.c \
+	core/liblog/log_event_write.c \
+	core/liblog/logprint.c
+LIBLOG2_SRCS= \
+	core/liblog/log_read.c \
+	core/liblog/logd_write.c \
+	core/liblog/log_read_kern.c \
+	core/liblog/logd_write_kern.c
 
 all:libselinux \
-    libz libsparse_host  \
+    libz libsparse  \
 	libpcre\
-	libmincrypt_host \
-	mkbootimg$(EXE) \
-	mkbootfs$(EXE) \
+	libmincrypt \
+	libcutils \
+	liblog \
 	simg2img$(EXE) \
 	simg2simg$(EXE) \
 	img2simg$(EXE) \
@@ -105,7 +133,7 @@ libz:
 	@$(AR) cqs $@.a zlib/src/*.o
 	@$(ECHO) "*******************************************"
 		
-libsparse_host:
+libsparse:
 	@$(ECHO) "Building libsparse_host..."
 	@$(ECHO) "*******************************************"
 	@$(CROSS_COMPILE)$(CC) -c $(LIBSPARSE_SRCS) $(CFLAGS)
@@ -114,21 +142,36 @@ libsparse_host:
 	@$(RM) -rfv *.o
 	@$(ECHO) "*******************************************"
 	
-libmincrypt_host:
+libmincrypt:
 	@$(ECHO) "Building libmincrypt_host..."
 	@$(CROSS_COMPILE)$(CC) -c $(LIBMINCRYPT_SRCS) $(CFLAGS)
 	@$(AR) cqs $@.a *.o
 	@$(RM) -rfv *.o
 	@$(ECHO) "*******************************************"
 	
+libcutils:
+	@$(ECHO) "Building libcutils_host..."
+	@$(CC) -c $(LIBCUTILS_SRCS) $(CFLAGS) $(LIBZ)
+	@$(AR) cqs $@.a *.o
+	@$(RM) -rfv *.o
+	@$(ECHO) "*******************************************"
+	
+liblog:
+	@$(ECHO) "Building liblog_host..."
+	@$(CC) -c $(LIBLOG1_SRCS) $(CFLAGS) $(DFLAGS) $(LIBZ)
+	@$(CC) -c $(LIBLOG2_SRCS) $(CFLAGS) $(EFLAGS) $(LIBZ)
+	@$(AR) cqs $@.a *.o
+	@$(RM) -rfv *.o
+	@$(ECHO) "*******************************************"
+	
 mkbootimg$(EXE):
 	@$(ECHO) "Building mkbootimg..."
-	@$(CROSS_COMPILE)$(CC) core/mkbootimg/mkbootimg.c -o $@ $(CFLAGS) $(LIBS) libmincrypt_host.a
+	@$(CC) external/android_system_core/mkbootimg/mkbootimg.c -o $@ $(CFLAGS) $(LDFLAGS) $(LIBS) $(LIBZ)
 	@$(ECHO) "*******************************************"
 	
 mkbootfs$(EXE):
 	@$(ECHO) "Building mkbootfs..."
-	@$(CROSS_COMPILE)$(CC) core/cpio/mkbootfs.c -o $@ $(CFLAGS) $(LIBS)
+	@$(CC) core/cpio/mkbootfs.c -o $@  $(CFLAGS) $(LDFLAGS) $(LIBS) $(LIBZ)
 	@$(ECHO) "*******************************************"
 
 simg2img$(EXE):
@@ -158,7 +201,7 @@ ext2simg$(EXE):
 	
 unpackbootimg$(EXE):
 	@$(ECHO) "Building unpackbootimg..."
-	@$(CROSS_COMPILE)$(CC) external/android_system_core/mkbootimg/unpackbootimg.c -o $@ $(CFLAGS) $(LIBS) libmincrypt_host.a
+	@$(CROSS_COMPILE)$(CC) external/android_system_core/mkbootimg/unpackbootimg.c -o $@ $(CFLAGS) $(LDFLAGS) $(LIBS) $(LIBZ)
 	@$(RM) -rfv *.a
 	@$(ECHO) "*******************************************"
 
@@ -184,11 +227,13 @@ clear:
 	@$(RM) -drfv \
 	core \
 	extras \
+	android_system_extras \
 	libselinux \
 	zlib \
 	external \
 	pcre \
-	sepolicy
+	sepolicy \
+	bionic
 
 	@$(ECHO) "*******************************************"
 		
