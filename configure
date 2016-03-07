@@ -2,14 +2,15 @@
 #
 # configure script for android_img_repack_tools.
 #
-BRANCH=android-5.1.1_r34
-BRANCH_EXT=stable/cm-12.1
+BRANCH=android-6.0.0_r41
+BRANCH_EXT=cm-13.0
 FILE=sepolicy/file_contexts
 FILE1=extras/ext4_utils/mkuserimg.sh
 FILE2=core/libsparse/defs.h
 FILE3=core/libsparse/img2simg.c
 FILE4=extras/ext4_utils/ext4_sb.h
 FILE5=core/libsparse/output_file.c
+FILE6=core/liblog/logd_write.c
 
 get_src() {
 	git clone $1
@@ -42,6 +43,10 @@ get_src https://android.googlesource.com/platform/external/libselinux
 	cd libselinux
 	checkout
 	cd ..
+get_src https://android.googlesource.com/platform/bionic
+	cd bionic
+	checkout
+	cd ..
 get_src https://android.googlesource.com/platform/external/pcre
 	cd pcre
 	checkout
@@ -67,6 +72,9 @@ sed -i '15r USE_MINGW' $FILE2
 sed -i '34r USE_MINGW' $FILE3
 sed -i '15r USE_MINGW' $FILE4
 sed -i '707a\#define USE_MINGW' $FILE5
+sed -i '/^/s:        android_set_abort_message:        //android_set_abort_message:' $FILE6
+sed -i '/^/s:    header.tid = gettid:    //header.tid = gettid:' $FILE6
+sed -i '/^/s:            buffer.header.tag = htole32(LIBLOG_LOG_TAG):            //buffer.header.tag = htole32(LIBLOG_LOG_TAG):' $FILE6
 
 	cp -fv $FILE .
 	cp -fv $FILE1 .
