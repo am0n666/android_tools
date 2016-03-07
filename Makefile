@@ -88,13 +88,12 @@ LIBCUTILS_SRCS= \
 	core/libcutils/iosched_policy.c \
 	core/libcutils/str_parms.c \
 	core/libcutils/fs_config.c
-LIBLOG1_SRCS= \
+LIBLOG_SRCS= \
 	core/liblog/uio.c \
 	core/liblog/event_tag_map.c \
 	core/liblog/fake_log_device.c \
-	core/liblog/log_event_write.c \
 	core/liblog/logprint.c
-LIBLOG2_SRCS= \
+LIBLOG_HOST= \
 	core/liblog/log_read.c \
 	core/liblog/logd_write.c \
 	core/liblog/log_read_kern.c \
@@ -158,8 +157,8 @@ libcutils:
 	
 liblog:
 	@$(ECHO) "Building liblog_host..."
-	@$(CC) -c $(LIBLOG1_SRCS) $(CFLAGS) $(DFLAGS) $(LIBZ)
-	@$(CC) -c $(LIBLOG2_SRCS) $(CFLAGS) $(EFLAGS) $(LIBZ)
+	@$(CC) -c $(LIBLOG_SRCS) $(CFLAGS) $(DFLAGS) $(LIBZ)
+	@$(CC) -c $(LIBLOG_HOST) $(CFLAGS) $(EFLAGS) $(LIBZ)
 	@$(AR) cqs $@.a *.o
 	@$(RM) -rfv *.o
 	@$(ECHO) "*******************************************"
