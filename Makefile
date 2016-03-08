@@ -14,7 +14,7 @@ DFLAGS = -Werror -Iandroid_suport_include
 EFLAGS = -Ibionic/libc/include -Ibionic/libc/kernel/uapi -Ibionic/libc/kernel/uapi/asm-x86
 LDFLAGS = -L.
 LIBS = -lz
-LIBZ = -lsparse -lselinux -lpcre -lcutils -llog
+LIBZ = -lsparse -lselinux -lpcre -lcutils -llog -lmincrypt
 SELINUX_SRCS= \
 	libselinux/src/booleans.c \
 	libselinux/src/canonicalize_context.c \
@@ -110,6 +110,8 @@ all:libselinux \
 	img2simg$(EXE) \
 	make_ext4fs$(EXE) \
 	ext2simg$(EXE) \
+	mkbootimg$(EXE) \
+	mkbootfs$(EXE) \
 	unpackbootimg$(EXE) \
 	sgs4ext4fs$(EXE)
 
@@ -235,4 +237,3 @@ clear:
 	bionic
 
 	@$(ECHO) "*******************************************"
-		
