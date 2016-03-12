@@ -11,10 +11,11 @@ endif
 
 CFLAGS = -DHOST -Icore/include -Icore/libsparse/include -Icore/libsparse -Ilibselinux/include -Icore/mkbootimg
 DFLAGS = -Werror -Iandroid_suport_include
-EFLAGS = -Ibionic/libc/include -Ibionic/libc/kernel/uapi -Ibionic/libc/kernel/uapi/asm-x86
+LIBC_FLAGS = -Ibionic/libc/include -Ibionic/libc/kernel/uapi -Ibionic/libc/kernel/uapi/asm-x86
+LIBLOG_FLAGS = -DLIBLOG_LOG_TAG=1005 -DFAKE_LOG_DEVICE=1 
 LDFLAGS = -L.
-LIBS = -lz
-LIBZ = -lsparse -lselinux -lpcre -lcutils -llog -lmincrypt
+LIBZ = -lz
+LIB_LOCAL = -lsparse -lselinux -lpcre -lcutils -llog -lmincrypt
 SELINUX_SRCS= \
 	libselinux/src/booleans.c \
 	libselinux/src/canonicalize_context.c \
@@ -79,8 +80,6 @@ LIBCUTILS_SRCS= \
 	core/libcutils/load_file.c \
 	core/libcutils/strlcpy.c \
 	core/libcutils/open_memstream.c \
-	core/libcutils/strdup16to8.c \
-	core/libcutils/strdup8to16.c \
 	core/libcutils/record_stream.c \
 	core/libcutils/process_name.c \
 	core/libcutils/threads.c \
@@ -95,31 +94,35 @@ LIBLOG_SRCS= \
 	core/liblog/logprint.c
 LIBLOG_HOST= \
 	core/liblog/log_read.c \
-	core/liblog/logd_write.c \
 	core/liblog/log_read_kern.c \
 	core/liblog/logd_write_kern.c
+LIBLOG_SRC= \
+	core/liblog/logd_write.c
 
-all:libselinux \
-    libz libsparse  \
-	libpcre\
+all: \
+    libselinux \
+    libz \
+	libsparse \
+	libpcre \
 	libmincrypt \
 	libcutils \
 	liblog \
-	simg2img$(EXE) \
-	simg2simg$(EXE) \
-	img2simg$(EXE) \
-	make_ext4fs$(EXE) \
-	ext2simg$(EXE) \
 	mkbootimg$(EXE) \
 	mkbootfs$(EXE) \
 	unpackbootimg$(EXE) \
+	simg2img$(EXE) \
+	simg2simg$(EXE) \
+	img2simg$(EXE) \
+	append2simg$(EXE) \
+	make_ext4fs$(EXE) \
+	ext2simg$(EXE) \
 	sgs4ext4fs$(EXE)
 
 .PHONY: libselinux
 
 libselinux:
 	@$(ECHO) "Building libselinux..."
-	@$(CROSS_COMPILE)$(CC) -c $(SELINUX_SRCS) $(CFLAGS) $(SELINUX_HOST)
+	@$(CROSS_COMPILE)$(CC) -c $(SELINUX_SRCS) $(CFLAGS) $(SELINUX_HOST) $(DFLAGS)
 	@$(AR) cqs $@.a *.o
 	@$(RM) -rfv *.o
 	@$(ECHO) "*******************************************"
@@ -145,65 +148,70 @@ libsparse:
 	
 libmincrypt:
 	@$(ECHO) "Building libmincrypt_host..."
-	@$(CROSS_COMPILE)$(CC) -c $(LIBMINCRYPT_SRCS) $(CFLAGS)
+	@$(CROSS_COMPILE)$(CC) -c $(LIBMINCRYPT_SRCS) $(CFLAGS) $(DFLAGS)
 	@$(AR) cqs $@.a *.o
 	@$(RM) -rfv *.o
 	@$(ECHO) "*******************************************"
 	
 libcutils:
 	@$(ECHO) "Building libcutils_host..."
-	@$(CC) -c $(LIBCUTILS_SRCS) $(CFLAGS) $(LIBZ)
+	@$(CC) -c $(LIBCUTILS_SRCS) $(CFLAGS) $(LIB_LOCAL) $(DFLAGS)
 	@$(AR) cqs $@.a *.o
 	@$(RM) -rfv *.o
 	@$(ECHO) "*******************************************"
 	
 liblog:
 	@$(ECHO) "Building liblog_host..."
-	@$(CC) -c $(LIBLOG_SRCS) $(CFLAGS) $(DFLAGS) $(LIBZ)
-	@$(CC) -c $(LIBLOG_HOST) $(CFLAGS) $(EFLAGS) $(LIBZ)
+	@$(CC) -c $(LIBLOG_SRCS) $(CFLAGS) $(LDFLAGS) $(LIB_LOCAL) $(DFLAGS)
+	@$(CC) -c $(LIBLOG_HOST) $(CFLAGS) $(LDFLAGS) $(DFLAGS) $(LIB_LOCAL) $(LIBC_FLAGS) $(DFLAGS)
+	@$(CC) -c $(LIBLOG_SRC) $(CFLAGS) $(LDFLAGS) $(DFLAGS) $(LIB_LOCAL) $(LIBLOG_FLAGS) $(DFLAGS)
 	@$(AR) cqs $@.a *.o
 	@$(RM) -rfv *.o
 	@$(ECHO) "*******************************************"
 	
 mkbootimg$(EXE):
 	@$(ECHO) "Building mkbootimg..."
-	@$(CC) external/android_system_core/mkbootimg/mkbootimg.c -o $@ $(CFLAGS) $(LDFLAGS) $(LIBS) $(LIBZ)
+	@$(CC) external/android_system_core/mkbootimg/mkbootimg.c -o $@ $(CFLAGS) $(LDFLAGS) $(LIBZ) $(LIB_LOCAL)
 	@$(ECHO) "*******************************************"
 	
 mkbootfs$(EXE):
 	@$(ECHO) "Building mkbootfs..."
-	@$(CC) core/cpio/mkbootfs.c -o $@  $(CFLAGS) $(LDFLAGS) $(LIBS) $(LIBZ)
+	@$(CC) core/cpio/mkbootfs.c -o $@  $(CFLAGS) $(LDFLAGS) $(LIBZ) $(LIB_LOCAL)
 	@$(ECHO) "*******************************************"
 
 simg2img$(EXE):
 	@$(ECHO) "Building simg2img..."
-	@$(CROSS_COMPILE)$(CC) core/libsparse/simg2img.c -o $@ $(LIBSPARSE_SRCS) $(CFLAGS) $(LIBS)
+	@$(CROSS_COMPILE)$(CC) core/libsparse/simg2img.c -o $@ $(LIBSPARSE_SRCS) $(CFLAGS) $(LIBZ)
 	@$(ECHO) "*******************************************"
 	
 simg2simg$(EXE):
 	@$(ECHO) "Building simg2simg..."
-	@$(CROSS_COMPILE)$(CC) core/libsparse/simg2simg.c -o $@ $(LIBSPARSE_SRCS) $(CFLAGS) $(LIBS)
+	@$(CROSS_COMPILE)$(CC) core/libsparse/simg2simg.c -o $@ $(LIBSPARSE_SRCS) $(CFLAGS) $(LIBZ)
 	@$(ECHO) "*******************************************"
 	
 img2simg$(EXE):
 	@$(ECHO) "Building img2simg..."
-	@$(CROSS_COMPILE)$(CC) core/libsparse/img2simg.c -o $@ $(LIBSPARSE_SRCS) $(CFLAGS) $(LIBS)
+	@$(CROSS_COMPILE)$(CC) core/libsparse/img2simg.c -o $@ $(LIBSPARSE_SRCS) $(CFLAGS) $(LIBZ)
+	@$(ECHO) "*******************************************"
+	
+append2simg$(EXE):
+	@$(ECHO) "Building append2simg..."
+	@$(CROSS_COMPILE)$(CC) core/libsparse/append2simg.c -o $@ $(LIBSPARSE_SRCS) $(CFLAGS) $(LIBZ)
 	@$(ECHO) "*******************************************"
 	
 make_ext4fs$(EXE):
 	@$(ECHO) "Building make_ext4fs..."
-	@$(CROSS_COMPILE)$(CC) -o $@ $(EXT4FS_MAIN) $(EXT4FS_SRCS) $(CFLAGS) $(LDFLAGS) $(LIBS) $(LIBZ)
+	@$(CROSS_COMPILE)$(CC) -o $@ $(EXT4FS_MAIN) $(EXT4FS_SRCS) $(LIB_LOCAL) $(CFLAGS) $(LDFLAGS)
 	@$(ECHO) "*******************************************"
 	
 ext2simg$(EXE):
 	@$(ECHO) "Building ext2simg..."
-	@$(CROSS_COMPILE)$(CC) -o $@ extras/ext4_utils/ext2simg.c $(EXT4FS_SRCS) $(CFLAGS) $(LDFLAGS) $(LIBS) $(LIBZ)
+	@$(CROSS_COMPILE)$(CC) -o $@ extras/ext4_utils/ext2simg.c $(EXT4FS_SRCS) $(CFLAGS) $(LDFLAGS) $(LIB_LOCAL)
 	@$(ECHO) "*******************************************"
 	
 unpackbootimg$(EXE):
 	@$(ECHO) "Building unpackbootimg..."
-	@$(CROSS_COMPILE)$(CC) external/android_system_core/mkbootimg/unpackbootimg.c -o $@ $(CFLAGS) $(LDFLAGS) $(LIBS) $(LIBZ)
-	@$(RM) -rfv *.a
+	@$(CROSS_COMPILE)$(CC) external/android_system_core/mkbootimg/unpackbootimg.c -o $@ $(CFLAGS) $(LDFLAGS) $(LIB_LOCAL)
 	@$(ECHO) "*******************************************"
 
 sgs4ext4fs$(EXE):
@@ -211,6 +219,9 @@ sgs4ext4fs$(EXE):
 	@$(CROSS_COMPILE)$(CC) external/sgs4ext4fs/main.c -o $@
 	@$(ECHO) "*******************************************"
 	
+	@$(ECHO) "Cleaning..."
+	@$(RM) -rfv *.a
+
 .PHONY:
 
 clean:
@@ -224,11 +235,10 @@ clean:
 
 clear:
 	@$(ECHO) "Clearing..."
-	@$(RM) -rfv *.o *.a *.sh file_contexts
+	@$(RM) -rfv *.o *.a mkuserimg.sh file_contexts simg_dump.py
 	@$(RM) -drfv \
 	core \
 	extras \
-	android_system_extras \
 	libselinux \
 	zlib \
 	external \
@@ -237,3 +247,4 @@ clear:
 	bionic
 
 	@$(ECHO) "*******************************************"
+	
