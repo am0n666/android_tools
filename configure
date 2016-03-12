@@ -10,7 +10,9 @@ FILE2=core/libsparse/defs.h
 FILE3=core/libsparse/img2simg.c
 FILE4=extras/ext4_utils/ext4_sb.h
 FILE5=core/libsparse/output_file.c
-FILE6=core/liblog/logd_write.c
+FILE6=core/libsparse/append2simg.c
+FILE7=core/libsparse/simg_dump.py
+
 
 get_src() {
 	git clone $1
@@ -50,37 +52,49 @@ get_src https://android.googlesource.com/platform/bionic
 get_src https://android.googlesource.com/platform/external/pcre
 	cd pcre
 	checkout
-	cd dist
-	./configure && make
-	cd ../..
+	cd ..
 get_src https://android.googlesource.com/platform/external/zlib
 	cd zlib
 	checkout
-	cd src
-	./configure
-	make
-	cd ../../external
+	cd ../external
 get_src https://github.com/CyanogenMod/android_system_core.git
 	cd android_system_core
 	checkout_external
 	cd ..
 get_src https://github.com/Chainfire/sgs4ext4fs
-	cd ..
-	
-sed -i '/^/s:MAKE_EXT4FS_CMD="make_ext4fs:MAKE_EXT4FS_CMD="./make_ext4fs:' $FILE1
-sed -i '15r USE_MINGW' $FILE2
-sed -i '34r USE_MINGW' $FILE3
-sed -i '15r USE_MINGW' $FILE4
-sed -i '707a\#define USE_MINGW' $FILE5
-sed -i '/^/s:        android_set_abort_message:        //android_set_abort_message:' $FILE6
-sed -i '/^/s:    header.tid = gettid:    //header.tid = gettid:' $FILE6
-sed -i '/^/s:            buffer.header.tag = htole32(LIBLOG_LOG_TAG):            //buffer.header.tag = htole32(LIBLOG_LOG_TAG):' $FILE6
+    cd ..
 
-	cp -fv $FILE .
-	cp -fv $FILE1 .
+
 
 echo
 echo "for android.googlesource.com choosed branch $BRANCH..."
 echo
 echo "for Cyanogen Mod source choosed branch $BRANCH_EXT..."
 echo
+cd pcre/dist
+./configure && make
+cd ../../zlib/src
+./configure && make
+cd ../..
+
+echo Patch files
+	
+sed -i '/^/s:MAKE_EXT4FS_CMD="make_ext4fs:MAKE_EXT4FS_CMD="./make_ext4fs:' $FILE1
+
+sed -i '15r USE_MINGW' $FILE2
+
+sed -i '34r USE_MINGW' $FILE3
+
+sed -i '15r USE_MINGW' $FILE4
+
+sed -i '707a\#define USE_MINGW' $FILE5
+
+sed -i '43r USE_MINGW' $FILE6
+
+
+
+	cp -fv $FILE .
+	cp -fv $FILE1 .
+	cp -fv $FILE7 .
+	
+make
